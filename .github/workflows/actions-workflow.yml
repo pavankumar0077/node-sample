@@ -59,21 +59,20 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
 
   security-scan:
-  name: Security Vulnerability Scan
-  needs: build-and-test
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    name: Security Vulnerability Scan
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        input: '.' # This line should be removed or corrected.
-        format: 'table'
-        vuln-type: 'os,library'
-        severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+      - name: Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          vuln-type: 'os,library'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
   notify-slack:
     if: always()
