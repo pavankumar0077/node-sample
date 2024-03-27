@@ -12,6 +12,9 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['12', '14', '16']
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -19,13 +22,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
-      # - name: Run unit tests
-      #   run: npm test
+      - name: Run unit tests
+        run: npm test
+
+      - name: Publish Code Coverage (Optional)
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
 
   code-analysis:
     name: SonarQube Analysis
@@ -57,3 +69,16 @@ jobs:
         with:
           scan-type: 'fs'
           input: '.'
+
+  notify-slack:
+    if: always()
+    needs: [build-and-test, code-analysis, security-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
