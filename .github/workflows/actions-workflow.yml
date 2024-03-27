@@ -73,6 +73,11 @@ jobs:
           format: 'table'
           vuln-type: 'os,library'
           severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+      
+      - name: Run Snyk vulnerability scanner
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   notify-slack:
     if: always()
