@@ -54,23 +54,26 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=96698329dcf4284d156e14bcadcf5328ad847294
-            -Dsonar.organization=pavankumar0077
+            -Dsonar.projectKey=pavankumar0077_myrepo
+            -Dsonar.organization=96698329dcf4284d156e14bcadcf5328ad847294
             -Dsonar.host.url=https://sonarcloud.io
 
   security-scan:
-    name: Security Vulnerability Scan
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+  name: Security Vulnerability Scan
+  needs: build-and-test
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          input: .
+    - name: Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        input: '.' # This line should be removed or corrected.
+        format: 'table'
+        vuln-type: 'os,library'
+        severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
   notify-slack:
     if: always()
