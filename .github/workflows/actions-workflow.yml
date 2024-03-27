@@ -8,12 +8,7 @@ on:
     branches:
       - main
 
-env:
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
 jobs:
-
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
@@ -44,33 +39,34 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
-  sonarqube-analysis:
+  code-analysis:
     name: SonarQube Analysis
-    needs: build
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+        uses: SonarSource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=your-project-key
-            -Dsonar.organization=your-organization-key
+            -Dsonar.projectKey=pavankumar0077_myrepo
+            -Dsonar.organization=96698329dcf4284d156e14bcadcf5328ad847294
+            -Dsonar.host.url=https://sonarcloud.io
 
   security-scan:
     name: Security Vulnerability Scan
-    needs: build
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Run Trivy vulnerability scanner
+      - name: Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -78,11 +74,10 @@ jobs:
           vuln-type: 'os,library'
           severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
-  notify:
-    name: Notify Slack
-    needs: [build, sonarqube-analysis, security-scan]
-    runs-on: ubuntu-latest
+  notify-slack:
     if: always()
+    needs: [build-and-test, code-analysis, security-scan]
+    runs-on: ubuntu-latest
     steps:
       - name: Notify Slack
         uses: 8398a7/action-slack@v3
