@@ -8,65 +8,77 @@ on:
     branches:
       - main
 
+env:
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 jobs:
-  build-and-test:
+
+  build:
     name: Build and Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['12', '14', '16']
+        node-version: [14.x, 16.x, 18.x]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-node-
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # - name: Run unit tests
-      #   run: npm test
+      - name: Run lint
+        run: npm run lint
 
-      - name: Publish Code Coverage (Optional)
-        uses: codecov/codecov-action@v2
+      - name: Run unit tests
+        run: npm test
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
+          name: coverage
+          path: coverage
 
-  code-analysis:
+  sonarqube-analysis:
     name: SonarQube Analysis
-    needs: build-and-test
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=pavankumar0077_myrepo
-            -Dsonar.organization=96698329dcf4284d156e14bcadcf5328ad847294
-            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.projectKey=your-project-key
+            -Dsonar.organization=your-organization-key
 
   security-scan:
     name: Security Vulnerability Scan
-    needs: build-and-test
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -74,10 +86,11 @@ jobs:
           vuln-type: 'os,library'
           severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
-  notify-slack:
-    if: always()
-    needs: [build-and-test, code-analysis, security-scan]
+  notify:
+    name: Notify Slack
+    needs: [build, sonarqube-analysis, security-scan]
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Notify Slack
         uses: 8398a7/action-slack@v3
